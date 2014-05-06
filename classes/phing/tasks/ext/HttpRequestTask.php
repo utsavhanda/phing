@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  * $Id$
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -19,7 +19,7 @@
  * <http://phing.info>.
  */
 
-require_once 'phing/Task.php';
+require_once 'phing/tasks/ext/HttpTask.php';
 
 /**
  * A HTTP request task.
@@ -31,70 +31,29 @@ require_once 'phing/Task.php';
  * @version $Id$
  * @since   2.4.1
  */
-class HttpRequestTask extends Task
+class HttpRequestTask extends HttpTask
 {
-    /**
-     * Holds the request URL
-     *
-     * @var string
-     */
-    protected $_url = null;
-
     /**
      * Holds the regular expression that should match the response
      *
      * @var string
      */
-    protected $_responseRegex = '';
+    protected $responseRegex = '';
 
     /**
      * Whether to enable detailed logging
      *
      * @var boolean
      */
-    protected $_verbose = false;
+    protected $verbose = false;
 
-    /**
-     * Holds additional header data
-     *
-     * @var array<Parameter>
-     */
-    protected $_headers = array();
-
-    /**
-     * Holds additional config data for HTTP_Request2
-     *
-     * @var array<Parameter>
-     */
-    protected $_configData = array();
-
-    /**
-     * Holds the authentication user name
-     *
-     * @var string
-     */
-    protected $_authUser = null;
-
-    /**
-     * Holds the authentication password
-     *
-     * @var string
-     */
-    protected $_authPassword = '';
-
-    /**
-     * Holds the authentication scheme
-     *
-     * @var string
-     */
-    protected $_authScheme;
 
     /**
      * Holds the events that will be logged
      *
      * @var array<string>
      */
-    protected $_observerEvents = array(
+    protected $observerEvents = array(
         'connect',
         'sentHeaders',
         'sentBodyPart',
@@ -104,14 +63,18 @@ class HttpRequestTask extends Task
     );
 
     /**
-     * Sets the request URL
+     * Holds the request method
      *
-     * @param string $url
+     * @var string
      */
-    public function setUrl($url)
-    {
-        $this->_url = $url;
-    }
+    protected $method = null;
+
+    /**
+     * Holds additional post parameters for the request
+     *
+     * @var Parameter[]
+     */
+    protected $postParameters = array();
 
     /**
      * Sets the response regex
@@ -120,38 +83,9 @@ class HttpRequestTask extends Task
      */
     public function setResponseRegex($regex)
     {
-        $this->_responseRegex = $regex;
+        $this->responseRegex = $regex;
     }
 
-    /**
-     * Sets the authentication user name
-     *
-     * @param string $user
-     */
-    public function setAuthUser($user)
-    {
-        $this->_authUser = $user;
-    }
-
-    /**
-     * Sets the authentication password
-     *
-     * @param string $password
-     */
-    public function setAuthPassword($password)
-    {
-        $this->_authPassword = $password;
-    }
-
-    /**
-     * Sets the authentication scheme
-     *
-     * @param string $scheme
-     */
-    public function setAuthScheme($scheme)
-    {
-        $this->_authScheme = $scheme;
-    }
 
     /**
      * Sets whether to enable detailed logging
@@ -160,50 +94,46 @@ class HttpRequestTask extends Task
      */
     public function setVerbose($verbose)
     {
-        $this->_verbose = StringHelper::booleanValue($verbose);
+        $this->verbose = StringHelper::booleanValue($verbose);
     }
 
     /**
-     * Sets a list of observer events that will be logged
-     * if verbose output is enabled.
+     * Sets a list of observer events that will be logged if verbose output is enabled.
      *
      * @param string $observerEvents List of observer events
-     *
-     * @return void
      */
     public function setObserverEvents($observerEvents)
     {
-        $this->_observerEvents = array();
+        $this->observerEvents = array();
 
         $token = ' ,;';
         $ext   = strtok($observerEvents, $token);
 
         while ($ext !== false) {
-            $this->_observerEvents[] = $ext;
+            $this->observerEvents[] = $ext;
             $ext = strtok($token);
         }
     }
 
     /**
-     * Creates an additional header for this task
-     *
-     * @return Parameter The created header
+     * The setter for the method
      */
-    public function createHeader()
+    public function setMethod($method)
     {
-        $num = array_push($this->_headers, new Parameter());
-        return $this->_headers[$num-1];
+        $this->method = $method;
     }
 
+
     /**
-     * Creates a config parameter for this task
+     * Creates post body parameters for this request
      *
-     * @return Parameter The created parameter
+     * @return Parameter The created post parameter
      */
-    public function createConfig()
+    public function createPostParameter()
     {
-        $num = array_push($this->_configData, new Parameter());
-        return $this->_configData[$num-1];
+      $num = array_push($this->postParameters, new Parameter());
+
+      return $this->postParameters[$num-1];
     }
 
     /**
@@ -213,71 +143,58 @@ class HttpRequestTask extends Task
      */
     public function init()
     {
-        @include_once 'HTTP/Request2.php';
+        parent::init();
 
-        if (! class_exists('HTTP_Request2')) {
-            throw new BuildException(
-                'HttpRequestTask depends on HTTP_Request2 being installed '
-                . 'and on include_path.',
-                $this->getLocation()
-            );
-        }
+        $this->authScheme = HTTP_Request2::AUTH_BASIC;
 
-        $this->_authScheme = HTTP_Request2::AUTH_BASIC;
-
-        // Other dependencies that should only be loaded
-        // when class is actually used
+        // Other dependencies that should only be loaded when class is actually used
         require_once 'HTTP/Request2/Observer/Log.php';
     }
 
     /**
-     * Make the http request
+     * Creates and configures an instance of HTTP_Request2
+     *
+     * @return HTTP_Request2
      */
-    public function main()
+    protected function createRequest()
     {
-        if (!isset($this->_url)) {
-            throw new BuildException("Missing attribute 'url' set");
+        $request = parent::createRequest();
+
+        if ($this->method == HTTP_Request2::METHOD_POST) {
+            $request->setMethod(HTTP_Request2::METHOD_POST);
+
+            foreach ($this->postParameters as $postParameter) {
+                $request->addPostParameter($postParameter->getName(), $postParameter->getValue());
+            }
         }
 
-        $request = new HTTP_Request2($this->_url);
-
-        // set the authentication data
-        if (!empty($this->_authUser)) {
-            $request->setAuth(
-                $this->_authUser,
-                $this->_authPassword,
-                $this->_authScheme
-            );
-        }
-
-        foreach ($this->_configData as $config) {
-            $request->setConfig($config->getName(), $config->getValue());
-        }
-
-        foreach ($this->_headers as $header) {
-            $request->setHeader($header->getName(), $header->getValue());
-        }
-
-        if ($this->_verbose) {
+        if ($this->verbose) {
             $observer = new HTTP_Request2_Observer_Log();
 
             // set the events we want to log
-            $observer->events = $this->_observerEvents;
+            $observer->events = $this->observerEvents;
 
             $request->attach($observer);
         }
 
-        $response = $request->send();
+        return $request;
+    }
 
-        if ($this->_responseRegex !== '') {
+    /**
+     * Checks whether response body matches the given regexp
+     *
+     * @param HTTP_Request2_Response $response
+     * @return void
+     * @throws BuildException
+     */
+    protected function processResponse(HTTP_Request2_Response $response)
+    {
+        if ($this->responseRegex !== '') {
             $matches = array();
-            preg_match($this->_responseRegex, $response->getBody(), $matches);
+            preg_match($this->responseRegex, $response->getBody(), $matches);
 
             if (count($matches) === 0) {
-                throw new BuildException(
-                    'The received response body did not match the '
-                    . 'given regular expression'
-                );
+                throw new BuildException('The received response body did not match the given regular expression');
             } else {
                 $this->log('The response body matched the provided regex.');
             }

@@ -88,7 +88,7 @@ class GitMergeTask extends GitBaseTask
      * @var array
      */
     private $validStrategies = array(
-        'octopus', 'ours', 'recursive', 'resolve', 'subtree');
+        'octopus', 'ours', 'theirs', 'recursive', 'resolve', 'subtree');
 
     /**
      * The main entry point for the task
@@ -146,7 +146,7 @@ class GitMergeTask extends GitBaseTask
         try {
             $output = $command->execute();
         } catch (Exception $e) {
-            throw new BuildException('Task execution failed.');
+            throw new BuildException('Task execution failed.', $e);
         }
 
         $this->log(

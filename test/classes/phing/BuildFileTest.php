@@ -24,7 +24,6 @@ if (version_compare(PHP_VERSION, '5.3.2') < 0) {
     define('E_DEPRECATED', 8192);
 }
                              
-require_once 'PHPUnit/Framework/TestCase.php';
 require_once 'phing/BuildListener.php';
 require_once 'phing/system/io/PhingFile.php';
 
@@ -200,6 +199,7 @@ abstract class BuildFileTest extends PHPUnit_Framework_TestCase {
         $this->project->init();
         $f = new PhingFile($filename);
         $this->project->setUserProperty( "phing.file" , $f->getAbsolutePath() );
+        $this->project->setUserProperty( "phing.dir"  , dirname($f->getAbsolutePath()) );
         $this->project->addBuildListener(new PhingTestListener($this));
         ProjectConfigurator::configureProject($this->project, new PhingFile($filename));
     }
@@ -422,7 +422,7 @@ class PhingTestListener implements BuildListener {
      *  @see BuildEvent#getMessage()
      *  @see BuildEvent#getPriority()
      */
-    public function messageLogged(BuildEvent $event) {        
+    public function messageLogged(BuildEvent $event) {
         $this->parent->logBuffer[] = $event->getMessage();
     }
 }

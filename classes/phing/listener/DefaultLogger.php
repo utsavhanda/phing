@@ -23,16 +23,16 @@ require_once 'phing/listener/StreamRequiredBuildLogger.php';
 include_once 'phing/BuildEvent.php';
 
 /**
- *  Writes a build event to the console.
+ * Writes a build event to the console.
  *
- *  Currently, it only writes which targets are being executed, and
- *  any messages that get logged.
+ * Currently, it only writes which targets are being executed, and
+ * any messages that get logged.
  *
- *  @author    Andreas Aderhold <andi@binarycloud.com>
- *  @copyright 2001,2002 THYRELL. All rights reserved
- *  @version   $Id$
- *  @see       BuildEvent
- *  @package   phing.listener
+ * @author    Andreas Aderhold <andi@binarycloud.com>
+ * @copyright 2001,2002 THYRELL. All rights reserved
+ * @version   $Id$
+ * @see       BuildEvent
+ * @package   phing.listener
  */
 class DefaultLogger implements StreamRequiredBuildLogger {
 
@@ -182,7 +182,8 @@ class DefaultLogger implements StreamRequiredBuildLogger {
      *  @see    BuildEvent::getTarget()
      */
     public function targetStarted(BuildEvent $event) {
-        if (Project::MSG_INFO <= $this->msgOutputLevel) {
+        if (Project::MSG_INFO <= $this->msgOutputLevel
+            && $event->getTarget()->getName() != '') {
             $showLongTargets = $event->getProject()->getProperty("phing.showlongtargets");
             $msg = PHP_EOL . $event->getProject()->getName() . ' > ' . $event->getTarget()->getName() . ($showLongTargets ? ' [' . $event->getTarget()->getDescription() . ']' : '') . ':' . PHP_EOL;
             $this->printMessage($msg, $this->out, $event->getPriority());

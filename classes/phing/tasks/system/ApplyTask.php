@@ -200,14 +200,12 @@ class ApplyTask extends Task {
 
 
   /**
-   * Nested creator, adds a set of files (nested <fileset> attribute).
-   * This is for when you don't care what order files get appended.
+   * Nested adder, adds a set of files (nested fileset attribute).
    *
-   * @return FileSet
+   * @return void
    */
-  public function createFileSet() {
-    $num = array_push($this->filesets, new FileSet());
-    return $this->filesets[$num-1];
+  public function addFileSet(FileSet $fs) {
+    $this->filesets[] = $fs;
   }
 
 
@@ -815,7 +813,7 @@ class ApplyTask extends Task {
     $return = null;
 
     // Validating the command executor container
-    ($this->passthru ? passthru($this->realCommand, $return) : exec($command, $output, $return));
+    ($this->passthru ? passthru($command, $return) : exec($command, $output, $return));
 
     // Log
     $this->log('Command execution : (' . ($this->passthru ? 'passthru' : 'exec') . ') : ' . $command . " : completed with return code ($return) ", $this->loglevel);

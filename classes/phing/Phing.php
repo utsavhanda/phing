@@ -34,10 +34,8 @@ include_once 'phing/parser/AbstractHandler.php';
 include_once 'phing/parser/ProjectConfigurator.php';
 include_once 'phing/parser/RootHandler.php';
 include_once 'phing/parser/ProjectHandler.php';
-include_once 'phing/parser/TaskHandler.php';
 include_once 'phing/parser/TargetHandler.php';
 include_once 'phing/parser/DataTypeHandler.php';
-include_once 'phing/parser/NestedElementHandler.php';
 
 include_once 'phing/system/util/Properties.php';
 include_once 'phing/util/StringHelper.php';
@@ -62,6 +60,8 @@ include_once 'phing/system/util/Register.php';
  * @package   phing
  */
 class Phing {
+    /** Alias for phar file */
+    const PHAR_ALIAS = 'phing.phar';
 
     /** The default build file name */
     const DEFAULT_BUILD_FILENAME = "build.xml";
@@ -197,10 +197,18 @@ class Phing {
      */
     private static function initializeOutputStreams() {
         if (self::$out === null) {
-            self::$out = new OutputStream(fopen("php://stdout", "w"));
+            if (!defined('STDOUT')) {
+              self::$out = new OutputStream(fopen('php://stdout', 'w'));
+            } else {
+              self::$out = new OutputStream(STDOUT);
+            }
         }
         if (self::$err === null) {
-            self::$err = new OutputStream(fopen("php://stderr", "w"));
+            if (!defined('STDERR')) {
+              self::$err = new OutputStream(fopen('php://stderr', 'w'));
+            } else {
+              self::$err = new OutputStream(STDERR);
+            }
         }
     }
 
@@ -356,7 +364,14 @@ class Phing {
                     $this->listeners[] = $args[++$i];
                 }
             } elseif (StringHelper::startsWith("-D", $arg)) {
-                $name = substr($arg, 2);
+                // Evaluating the property information //
+                // Checking whether arg. is not just a switch, and next arg. does not starts with switch identifier
+                if ( ('-D' == $arg) && (! StringHelper::startsWith('-', $args[$i+1])) ) {
+                  $name = $args[++$i];
+                } else {
+                  $name = substr($arg, 2);
+                }
+                
                 $value = null;
                 $posEq = strpos($name, "=");
                 if ($posEq !== false) {
@@ -408,9 +423,9 @@ class Phing {
                 }
             } elseif (substr($arg,0,1) == "-") {
                 // we don't have any more args
-                self::$err->write("Unknown argument: $arg" . PHP_EOL);
                 self::printUsage();
-                return;
+                self::$err->write(PHP_EOL);
+                throw new ConfigurationException("Unknown argument: " . $arg);
             } else {
                 // if it's no other arg, it may be the target
                 array_push($this->targets, $arg);
@@ -426,14 +441,24 @@ class Phing {
                 $this->buildFile = new PhingFile(self::DEFAULT_BUILD_FILENAME);
             }
         }
-        // make sure buildfile exists
-        if (!$this->buildFile->exists()) {
-            throw new ConfigurationException("Buildfile: " . $this->buildFile->__toString() . " does not exist!");
-        }
-
-        // make sure it's not a directory
-        if ($this->buildFile->isDirectory()) {
-            throw new ConfigurationException("Buildfile: " . $this->buildFile->__toString() . " is a dir!");
+        
+        try {
+            // make sure buildfile (or buildfile.dist) exists
+            if (!$this->buildFile->exists()) {
+                $distFile = new PhingFile($this->buildFile->getAbsolutePath() . ".dist");
+                if (! $distFile->exists()) {
+                    throw new ConfigurationException("Buildfile: " . $this->buildFile->__toString() . " does not exist!");
+                }
+                $this->buildFile = $distFile;
+            }
+        
+            // make sure it's not a directory
+            if ($this->buildFile->isDirectory()) {
+                throw new ConfigurationException("Buildfile: " . $this->buildFile->__toString() . " is a dir!");
+            }
+        } catch (IOException $e) {
+            // something else happened, buildfile probably not readable
+            throw new ConfigurationException("Buildfile: " . $this->buildFile->__toString() . " is not readable!");
         }
 
         $this->readyToRun = true;
@@ -623,7 +648,7 @@ class Phing {
         foreach($this->listeners as $listenerClassname) {
             try {
                 $clz = Phing::import($listenerClassname);
-            } catch (Exception $x) {
+            } catch (Exception $e) {
                 $msg = "Unable to instantiate specified listener "
                 . "class " . $listenerClassname . " : "
                 . $e->getMessage();
@@ -977,20 +1002,30 @@ class Phing {
     }
 
     /**
-     * Import a dot-path notation class path.
-     * @param string $dotPath
+     * Import a path, supporting the following conventions:
+     * - PEAR style (@link http://pear.php.net/manual/en/standards.naming.php)
+     * - PSR-0 (@link https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-0.md)
+     * - dot-path
+     *
+     * @param string $dotPath Path
      * @param mixed $classpath String or object supporting __toString()
      * @return string The unqualified classname (which can be instantiated).
      * @throws BuildException - if cannot find the specified file
      */
     public static function import($dotPath, $classpath = null) {
 
-        /// check if this is a PEAR-style path (@link http://pear.php.net/manual/en/standards.naming.php)
-        if (strpos($dotPath, '.') === false && strpos($dotPath, '_') !== false) {
-            $classname = $dotPath;
-            $dotPath = str_replace('_', '.', $dotPath);
-        } else {
+        if (strpos($dotPath, '.') !== false) {
             $classname = StringHelper::unqualify($dotPath);
+        } else {
+            $classname = $dotPath;
+            $dotPath = ''; 
+            $shortClassName = $classname; 
+            if (($lastNsPos = strripos($shortClassName, '\\'))) { 
+                $namespace = substr($shortClassName, 0, $lastNsPos); 
+                $shortClassName = substr($shortClassName, $lastNsPos + 1); 
+                $dotPath  = str_replace('\\', '.', $namespace) . '.'; 
+            } 
+            $dotPath .= str_replace('_', '.', $shortClassName); 
         }
         
         // first check to see that the class specified hasn't already been included.
@@ -1047,8 +1082,8 @@ class Phing {
             // possible to write far less expensive run-time applications (e.g. using Propel), which is
             // really where speed matters more.
 
-            $curr_parts = explode(PATH_SEPARATOR, get_include_path());
-            $add_parts = explode(PATH_SEPARATOR, $classpath);
+            $curr_parts = Phing::explodeIncludePath();
+            $add_parts = Phing::explodeIncludePath($classpath);
             $new_parts = array_diff($add_parts, $curr_parts);
             if ($new_parts) {
                 set_include_path(implode(PATH_SEPARATOR, array_merge($new_parts, $curr_parts)));
@@ -1074,8 +1109,7 @@ class Phing {
     public static function getResourcePath($path) {
 
         if (self::$importPaths === null) {
-            $paths = get_include_path();
-            self::$importPaths = explode(PATH_SEPARATOR, $paths);
+            self::$importPaths = self::explodeIncludePath();
         }
 
         $path = str_replace('\\', DIRECTORY_SEPARATOR, $path);
@@ -1092,6 +1126,14 @@ class Phing {
         $homeDir = self::getProperty('phing.home');
         if ($homeDir) {
             $testPath = $homeDir . DIRECTORY_SEPARATOR . $path;
+            if (file_exists($testPath)) {
+                return $testPath;
+            }
+        }
+
+        // Check for the phing home of phar archive
+        if (strpos(self::$importPaths[0], 'phar://') === 0) {
+            $testPath = self::$importPaths[0] . '/../' . $path;
             if (file_exists($testPath)) {
                 return $testPath;
             }
@@ -1123,6 +1165,36 @@ class Phing {
         }
 
         return null;
+    }
+
+    /**
+     * Explode an include path into an array
+     *
+     * If no path provided, uses current include_path. Works around issues that
+     * occur when the path includes stream schemas.
+     *
+     * Pulled from Zend_Loader::explodeIncludePath() in ZF1.
+     *
+     * @copyright Copyright (c) 2005-2011 Zend Technologies USA Inc. (http://www.zend.com)
+     * @license http://framework.zend.com/license/new-bsd New BSD License
+     * @param  string|null $path
+     * @return array
+     */
+    public static function explodeIncludePath($path = null)
+    {
+        if (null === $path) {
+            $path = get_include_path();
+        }
+
+        if (PATH_SEPARATOR == ':') {
+            // On *nix systems, include_paths which include paths with a stream
+            // schema cannot be safely explode'd, so we have to be a bit more
+            // intelligent in the approach.
+            $paths = preg_split('#:(?!//)#', $path);
+        } else {
+            $paths = explode(PATH_SEPARATOR, $path);
+        }
+        return $paths;
     }
 
     // -------------------------------------------------------------------------------------------

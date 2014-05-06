@@ -24,18 +24,27 @@ require_once 'phing/tasks/ext/git/GitBaseTask.php';
 /**
  * Wrapper around git-commit
  *
- * @package Phing.tasks.ext.git
+ * @package phing.tasks.ext.git
  * @author Jonathan Creasy <jonathan.creasy@gmail.com>
  * @see VersionControl_Git
  * @since 2.4.3
  */
 class GitCommitTask extends GitBaseTask
 {
-    private $allFiles;
-
+    /**
+     * @var boolean
+     */
+    private $allFiles = false;
+    
+    /**
+     * @var string
+     */
     private $message;
-
-    private $files;
+    
+    /**
+     * @var FileSet[]
+     */
+    private $filesets = array();
 
     /**
      * The main entry point for the task
@@ -46,76 +55,69 @@ class GitCommitTask extends GitBaseTask
             throw new BuildException('"repository" is required parameter');
         }
 
-        if ($this->allFiles !== true && empty($this->files))
-        {
-        	throw new BuildException('"allFiles" cannot be false if no files are specified.');
+        if ($this->allFiles !== true && empty($this->filesets)) {
+            throw new BuildException('"allFiles" cannot be false if no filesets are specified.');
         }
 
-        $client = $this->getGitClient(false, $this->getRepository());
-
-        $options = Array();
-
-        if ($this->allFiles === true)
-        {
-        	$options['all'] = true;
+        $options = array();
+        if ($this->allFiles === true) {
+            $options['all'] = true;
         }
 
-        $arguments = Array();
-        if ($this->allFiles !== true && is_array($this->files))
-        {
-        	foreach($files as $file)
-        	{
-	        	$arguments[] = $file;
-        	}
+        $arguments = array();
+        if ($this->allFiles !== true) {
+            foreach ($this->filesets as $fs) {
+                $ds       = $fs->getDirectoryScanner($this->project);
+                $srcFiles = $ds->getIncludedFiles();
+                
+                foreach ($srcFiles as $file) {
+                	$arguments[] = $file;
+                }
+            }
         }
 
-        if (!empty($this->message))
-        {
+        if (!empty($this->message)) {
             $options['message'] = $this->message;
         } else {
-        	$options['allow-empty-message'] = true;
+            $options['allow-empty-message'] = true;
         }
 
         try {
-        	$command = $client->getCommand('commit');
-        	$command->setArguments($arguments);
-        	$command->setOptions($options);
-        	$command->execute();
+            $client = $this->getGitClient(false, $this->getRepository());
+            
+            $command = $client->getCommand('commit');
+            $command->setArguments($arguments);
+            $command->setOptions($options);
+            $command->execute();
         } catch (Exception $e) {
-            throw new BuildException('The remote end hung up unexpectedly');
+            throw new BuildException('The remote end hung up unexpectedly', $e);
         }
-
+        
+        $this->logCommand($options, $arguments);
+    }
+    
+    protected function logCommand(array $options, array $arguments)
+    {
         $msg = 'git-commit: Executed git commit ';
         foreach ($options as $option=>$value)
         {
-
-        	$msg .= ' --' . $option . '=' . $value;
+            $msg .= ' --' . $option . '=' . $value;
         }
 
         foreach ($arguments as $argument)
         {
-        	$msg .= ' ' . $argument;
+            $msg .= ' ' . $argument;
         }
 
         $this->log($msg, Project::MSG_INFO);
     }
 
-    /**
-     * Alias @see getAllFiles()
-     *
-     * @return string
-     */
-    public function isallFiles()
-    {
-        return $this->getallFiles();
-    }
-
-    public function getallFiles()
+    public function getAllFiles()
     {
         return $this->allFiles;
     }
 
-    public function setallFiles($flag)
+    public function setAllFiles($flag)
     {
         $this->allFiles = (bool)$flag;
     }
@@ -130,19 +132,12 @@ class GitCommitTask extends GitBaseTask
     	$this->message = $message;
     }
 
-    public function getFiles()
-    {
-    	return $this->files;
-    }
-
-    public function setFiles($files)
-    {
-    	if (!$empty($files) && is_array($files))
-    	{
-    		$this->setallfiles(false);
-    		$this->Files = $files;
-    	} else {
-    		$this->Files = null;
-    	}
+    /**
+     * Nested adder, adds a set of files (nested fileset attribute).
+     *
+     * @return void
+     */
+    public function addFileSet(FileSet $fs) {
+        $this->filesets[] = $fs;
     }
 }

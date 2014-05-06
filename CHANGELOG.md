@@ -2,10 +2,157 @@ P     H     I     N     G
 =========================
 
 
+Feb. 13, 2014 - Phing 2.7.0
+---------------------------
+
+New or improved functionality:
+
+ * Support for PHP CodeSniffer 1.5, PHP Copy&Paste Detector 2.0 and PHPLOC 2.0
+ * Composer support for PHPCPD and PhpDocumentor tasks
+ * Fixed / improved error handling in various places
+ * More unit / regression tests added
+ * Various bugs and documentation errors fixed
+
+Additionally, the following Trac tickets (see www.phing.info) were fixed in this release:
+
+ * [1083] PhpDocumentor2Task: add support for default package name
+ * [1082] Tasks in root target are executed twice
+ * [1081] Documentation of AvailableTask does not link to conditions page
+ * [1078] IoncubeEncoderTask does not support PHP 5.4
+ * [1073] Phing silently died, when cant read build.xml
+ * [1070] PHPCS 1.5.0 breaks PHPCodeSniffer Task
+ * [1064] Formatter 'brief' not implemented when using Unittest task
+ * [1063] PHPCPD 2.0 breaks PHPCPD Task
+ * [1062] AvailableTask throws exception when filepath contains duplicates
+ * [1059] phing exits with return code 0 when there is unkown argument
+ * [1057] pdo exception thrown from pdosqlexec not properly handled
+ * [1056] filesyncTask: problem (error?) with verbose (-v) option
+ * [1054] Missing or erroneous definition in phing-grammar.rng
+ * [1053] Add composer support for phpdoc2 task
+ * [1051] phing 2.6.1 - impossible upgrade
+ * [1045] PHPLocTask broken with recent phploc updates
+ * [1044] Using fileset in echo does not list subdirectories
+ * [1042] Fix UnknownElement wrapping and configuring
+ * [1035] phpcpd tasks does not find dependencies when installed by composer
+ * [1034] Improving debuggability of errors in custom code
+ * [1032] FileSync Port
+ * [1030] JsMin task creates directories with 0700 permissions
+ * [1028] Change visibility of FailTask variables
+ * [1021] MailTask backend configuration
+ * [1010] Invalid error about refid attribute when specifying multiple targets
+ * [1009] certain liquibase tasks (rollback, tag and update) do not check return value
+ * [994] Clarify pdoexec autocommit/transactions
+ * [991] GitCommit: add fileset support
+ * [984] Improve documentation about including custom tasks
+ * [983] Selenium with PHPUnit: browser configurations are not processed
+ * [978] svn switches: recursive
+ * [976] phpunitreport: broken html for test suite names containing "/"
+ * [650] Namespace support for extensions (PSR0 support)
+
+Aug. 27, 2013 - Phing 2.6.1
+---------------------------
+
+This patch release fixes a regression when setting properties
+in then/else blocks.
+
+Note: the fix currently disables support for custom conditions,
+full support will be restored in Phing 2.7.0.
+
+ * [1041] Properties within then/else blocks are not expanded
+
+Aug. 21, 2013 - Phing 2.6.0
+---------------------------
+
+New or improved functionality:
+
+ * Docbook5 documentation is now the main documentation; output targets
+   are 'hlhtml', 'chunkhtml', 'hlpdf', 'epub' and 'webhelp'
+ * HttpRequest task supports POST request
+ * PharPackage task supports PKCS#12 certificate stores
+ * WikiPublish task was added
+ * Smarty task is now compatible with Smarty 3
+ * A new logger 'TargetLogger' was added, displaying the execution time for each target
+ * Composer task and package were updated
+ * More unit / regression tests added
+ * Various bugs and documentation errors fixed
+
+Additionally, the following Trac tickets (see www.phing.info) were fixed in this release:
+
+ * [1037] PropertyTask docs is wrong
+ * [1036] Error in ApplyTask->executeCommand()
+ * [1029] PhpDocumentor2 task broken with latest phpdoc version
+ * [1027] RegexpMapper uses deprecated PREG_REPLACE_EVAL
+ * [1025] PHPLocTask fails when installed via composer
+ * [1023] Argument 1 passed to IniFileTokenReader::setFile() must be an instance of PhingFile
+ * [1020] [PHP Error] Illegal string offset 'filename' [line 149 of /usr/share/pear/phing/tasks/ext/ExtractBaseTask.php]
+ * [1015] phing does not allow phpunit to echo
+ * [1011] Problem with spaces in output redirection path
+ * [1004] <gitcommit .../> does not work because task definition is missing in defaults.properties + another bug
+ * [1003] 2 php syntax bugs in GitCommitTask
+ * [1000] Make phing.phar work out of the box
+ * [999]  phing-2.5.0.phar Can't load default task list
+ * [993]  passthru will redirect stderr
+ * [990]  Prompting for a property value when it is not set results in a repeated input message
+ * [985]  Git Commit Task missing from docs
+ * [981]  FileUtil::copyFile(): $preserveLastModified causes empty symlink target file
+ * [970]  FileSyncTask missing from docbook5 documentation
+ * [966]  phing unit tests nice on all platforms
+ * [920]  Load phpdepend dependency only when they are used
+ * [906]  Move to docbook5 documentation
+ * [438]  pdosqlexec: add delimiterType=none (default), clarify delimiter documentation (was: pdosqlexec triggers segmentation fault)
+
+Feb. 16, 2013 - Phing 2.5.0
+---------------------------
+
+This release addresses the following issues:
+
+ * [979] svncommit: invalid switch ignoreexternals
+ * [977] phpunit Task doesn't support @codeCoverageIgnore[...] comments
+ * [972] SvnCopyTask: remove "force" from documentation
+ * [971] TokenSource does not work
+ * [969] PHPUnit task does not report diffs for failed assertions
+ * [968] Proper handling of STDOUT and STDERR
+ * [963] XSLT task fails with fatal error on PHP 5.4
+ * [962] DbDeploy: infinite loop in case if directory not found
+ * [961] DbDeploy: checkall output isn't informative
+ * [960] Documentation of Dbdeploy task
+ * [959] Bug in SvnListTask Version 2.4.14
+ * [958] Property wrapped in if/then structure is not substituted by it's value
+ * [954] Paths becoming part of S3 file names on Windows
+ * [953] Add PHP extension check to Available Task
+ * [952] Properly document how to load environment variables as properties
+ * [951] S3Put throws "Source is not set" exception
+ * [949] SymfonyConsoleTask improvements: checkreturn and output of command
+ * [947] AvailableTask does not work on unix domain sockets
+ * [946] <target hidden="true> is undocumented
+ * [941] ZendGuardEncode under Windows 7
+ * [937] DbDeployTask applied_by username is hardcoded and cannot be changed
+ * [935] phpcodesniffertask does not work on CSS and JS files
+ * [932] SshTask Methods Options
+ * [921] JSL Lint Task - Halt on warning
+ * [910] Add preservepermissions flag to copy task
+ * [898] Add ApplyTask
+ * [838] -D option doesn't work with a space after it
+ * [599] Phar package does not work on Windows platforms
+
+Nov. 29, 2012 - Phing 2.4.14
+----------------------------
+
+This release addresses the following issues:
+
+  * [944] phing/phingdocs bad md5sum
+  * [943] If task with "equals" directly in "project" tag does not work
+  * [942] Typo in tasks/ext/dbdeploy/DbmsSyntaxOracle.php
+  * [939] Add username/password to svn info/lastrevision/list/log task docs
+  * [938] XSLT filter fails when libxslt security present in php
+
+Starting from this version, Phing releases and release numbers will follow
+the Semantic Versioning (www.semver.org) principle.
+
 Nov. 20, 2012 - Phing 2.4.13
 ----------------------------
 
-This releases updates the composer package, adds a phploc task and improved
+This release updates the composer package, adds a phploc task and improved
 support for phpDocumentor 2 and IonCube 7, improves the unit tests,
 clarifies the documentation in a number of places, and addresses
 the following issues:

@@ -25,6 +25,7 @@ include_once 'phing/TaskAdapter.php';
 include_once 'phing/util/StringHelper.php';
 include_once 'phing/BuildEvent.php';
 include_once 'phing/input/DefaultInputHandler.php';
+include_once 'phing/types/PropertyValue.php';
 
 /**
  *  The Phing project class. Represents a completely configured Phing project.
@@ -210,6 +211,7 @@ class Project {
 
         $this->log("Setting project property: " . $name . " -> " . $value, Project::MSG_DEBUG);
         $this->properties[$name] = $value;
+        $this->addReference($name, new PropertyValue($value));
     }
 
     /**
@@ -230,6 +232,7 @@ class Project {
         }
         $this->log("Setting project property: " . $name . " -> " . $value, Project::MSG_DEBUG);
         $this->properties[$name] = $value;
+        $this->addReference($name, new PropertyValue($value));
     }
 
     /**
@@ -242,9 +245,10 @@ class Project {
      * @see #setProperty()
      */
     public function setUserProperty($name, $value) {
-        $this->log("Setting ro project property: " . $name . " -> " . $value, Project::MSG_DEBUG);
+        $this->log("Setting user project property: " . $name . " -> " . $value, Project::MSG_DEBUG);
         $this->userProperties[$name] = $value;
         $this->properties[$name] = $value;
+        $this->addReference($name, new PropertyValue($value));
     }
 
     /**
@@ -278,6 +282,7 @@ class Project {
             return;
         }
         $this->properties[$name] = $value;
+        $this->addReference($name, new PropertyValue($value));
     }
 
     /**
@@ -488,6 +493,7 @@ class Project {
         }
 
         $dir = $this->fileUtils->normalize($dir);
+        $dir = FileSystem::getFilesystem()->canonicalize($dir);
 
         $dir = new PhingFile((string) $dir);
         if (!$dir->exists()) {
@@ -562,9 +568,9 @@ class Project {
         }  elseif (!isset($this->taskdefs[$name])) {
             Phing::import($class, $classpath);
             $this->taskdefs[$name] = $class;
-            $this->log("  +Task definiton: $name ($class)", Project::MSG_DEBUG);
+            $this->log("  +Task definition: $name ($class)", Project::MSG_DEBUG);
         } else {
-            $this->log("Task $name ($class) already registerd, skipping", Project::MSG_VERBOSE);
+            $this->log("Task $name ($class) already registered, skipping", Project::MSG_VERBOSE);
         }
     }
 
@@ -588,7 +594,7 @@ class Project {
             $this->typedefs[$typeName] = $typeClass;
             $this->log("  +User datatype: $typeName ($typeClass)", Project::MSG_DEBUG);
         } else {
-            $this->log("Type $typeName ($typeClass) already registerd, skipping", Project::MSG_VERBOSE);
+            $this->log("Type $typeName ($typeClass) already registered, skipping", Project::MSG_VERBOSE);
         }
     }
 
@@ -605,7 +611,7 @@ class Project {
      * @param string $targetName
      * @param Target $target
      */
-    public function addTarget($targetName, &$target) {
+    public function addTarget($targetName, $target) {
         if (isset($this->targets[$targetName])) {
             throw new BuildException("Duplicate target: $targetName");
         }
@@ -623,7 +629,7 @@ class Project {
         $this->targets[$targetName] = $target;
 
         $ctx = $this->getReference("phing.parsing.context");
-        $current = $ctx->getConfigurator()->getCurrentTargets();
+        $current = $ctx->getCurrentTargets();
         $current[$targetName] = $target;
     }
 
@@ -974,7 +980,7 @@ class Project {
      */
     public function addReference($name, $object) {
         if (isset($this->references[$name])) {
-            $this->log("Overriding previous definition of reference to $name", Project::MSG_WARN);
+            $this->log("Overriding previous definition of reference to $name", Project::MSG_VERBOSE);
         }
         $this->log("Adding reference: $name -> ".get_class($object), Project::MSG_DEBUG);
         $this->references[$name] = $object;

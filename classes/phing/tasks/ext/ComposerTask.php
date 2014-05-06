@@ -1,6 +1,27 @@
 <?php
 
+/*
+ *  $Id$
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * This software consists of voluntary contributions made by many individuals
+ * and is licensed under the LGPL. For more information please see
+ * <http://phing.info>.
+ */
+
 require_once "phing/Task.php";
+require_once "phing/types/Commandline.php";
 
 /**
  * Composer Task
@@ -8,19 +29,15 @@ require_once "phing/Task.php";
  *
  * @author nuno costa <nuno@francodacosta.com>
  * @license MIT
- *
+ * @version $Id$
+ * @package phing.tasks.ext
  */
-class ComposerTask extends \Task
+class ComposerTask extends Task
 {
     /**
      * @var string the path to php interperter
      */
     private $php = 'php';
-    /**
-     *
-     * @var Array of Arg a collection of Arg objects
-     */
-    private $args = array();
 
     /**
      *
@@ -111,37 +128,35 @@ class ComposerTask extends \Task
     }
 
     /**
-     * Gets the command string to be executed
+     * Prepares the command string to be executed
      * @return string
      */
-    private function prepareCommand()
+    private function prepareCommandLine()
     {
         $this->commandLine->setExecutable($this->getPhp());
-
-        $composerCommand = $this->commandLine->createArgument(true);
-        $composerCommand->setValue($this->getCommand());
-
-        $composerPath = $this->commandLine->createArgument(true);
-        $composerPath->setValue($this->getCOmposer());
-
+        //We are un-shifting arguments to the beginning of the command line because arguments should be at the end
+        $this->commandLine->createArgument(true)->setValue($this->getCommand());
+        $this->commandLine->createArgument(true)->setValue($this->getComposer());
+        $commandLine = strval($this->commandLine);
+        //Creating new Commandline instance. It allows to handle subsequent calls correctly
+        $this->commandLine = new Commandline();
+        return $commandLine;
     }
     /**
-     * executes the synfony consile application
+     * executes the Composer task
      */
     public function main()
     {
-
-        $this->prepareCommand();
-        $this->log("executing $this->commandLine");
+        $commandLine = $this->prepareCommandLine();
+        $this->log("executing " . $commandLine);
 
         $composerFile = new SplFileInfo($this->getComposer());
-        if (false === $composerFile->isExecutable()
-                || false === $composerFile->isFile()) {
+        if (false === $composerFile->isFile()) {
             throw new BuildException(sprintf('Composer binary not found, path is "%s"', $composerFile));
         }
 
         $return = 0;
-        passthru($this->commandLine, $return);
+        passthru($commandLine, $return);
 
         if ($return > 0) {
             throw new BuildException("Composer execution failed");

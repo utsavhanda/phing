@@ -48,31 +48,29 @@ class PhpDocumentor2Task extends Task
      * name of the template to use
      * @var string
      */
-    private $template = "responsive";
+    private $template = "responsive-twig";
     
     /**
      * Title of the project
      * @var string
      */
-    private $title = "";
+    private $title = "API Documentation";
     
     /**
-     * Force phpDocumentor to be quiet
-     * @var boolean
+     * Name of default package
+     * @var string
      */
-    private $quiet = true;
+    private $defaultPackageName = "Default";
     
     /**
-     * Nested creator, adds a set of files (nested fileset attribute).
-     * 
-     * @return FileSet
+     * Nested adder, adds a set of files (nested fileset attribute).
+     *
+     * @return void
      */
-    public function createFileSet()
-    {
-        $num = array_push($this->filesets, new FileSet());
-        return $this->filesets[$num-1];
+    public function addFileSet(FileSet $fs) {
+        $this->filesets[] = $fs;
     }
-    
+
     /**
      * Sets destination/target directory
      * @param PhingFile $destDir
@@ -110,12 +108,22 @@ class PhpDocumentor2Task extends Task
     }
     
     /**
+     * Sets the default package name
+     * @param string $defaultPackageName
+     */
+    public function setDefaultPackageName($defaultPackageName)
+    {
+        $this->defaultPackageName = (string) $defaultPackageName;
+    }
+    
+    /**
      * Forces phpDocumentor to be quiet
+     * @deprecated
      * @param boolean $quiet
      */
     public function setQuiet($quiet)
     {
-        $this->quiet = (boolean) $quiet;
+        $this->project->log(__CLASS__ . ": the 'quiet' option has been deprecated", Project::MSG_WARN);
     }
     
     /**
@@ -144,6 +152,7 @@ class PhpDocumentor2Task extends Task
         $wrapper->setDestDir($this->destDir);
         $wrapper->setTemplate($this->template);
         $wrapper->setTitle($this->title);
+        $wrapper->setDefaultPackageName($this->defaultPackageName);
         $wrapper->run();
     }
 }

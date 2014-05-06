@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?xml-model xlink:href="http://www.oasis-open.org/docbook/xml/5.0/rng/docbookxi.rng" 
+<?xml-model xlink:href="http://www.oasis-open.org/docbook/xml/5.0/rng/docbookxi.rng"
             schematypens="http://relaxng.org/ns/structure/1.0"?>
 <chapter xmlns="http://docbook.org/ns/docbook" xmlns:xi="http://www.w3.org/2001/XInclude"
     xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="ch.extending">
@@ -18,7 +18,7 @@
                 xlink:href="#sect.ext.tasks"/>, <xref xlink:href="#sect.ext.types" xlink:title="Types"/>, <xref
                 xlink:href="#sect.ext.mappers" xlink:title="Mappers"/>. The following sections discuss these
             options.</para>
- 
+
         <sect2 xml:id="sect.ext.tasks" xreflabel="Tasks">
             <title> Tasks </title>
 
@@ -47,7 +47,7 @@
             <title> Mappers </title>
 
             <para>Creating new mappers is also a rare need, since most everything can be handled by
-                the <xref xlink:href="#app.coretypes"/>. The Mapper framework does provide a simple
+                the <xref xlink:href="#app.coremappers"/>. The Mapper framework does provide a simple
                 way for defining your own mappers to use instead, however, and mappers implement a
                 very simple interface.</para>
         </sect2>
@@ -380,30 +380,31 @@ class MyEchoTask extends Task {
      * The init method: Do init steps.
      */
     public function init() {
-      // nothing to do here
+        // nothing to do here
     }
 
     /**
      * The main entry point method.
      */
     public function main() {
-      print($this->message);
+        print($this->message);
     }
 }
 
 ?></programlisting>
 
             <para>This code contains a rather simple, but complete Phing task. It is assumed that
-                the file is named <literal>MyEchoTask.php</literal> and placed in
-                    <literal>classes/phing/tasks/my</literal> directory. We'll explain the source
-                code in detail shortly. But first we'd like to discuss how we should register the
+                the file is named <literal>MyEchoTask.php</literal>. For
+                this example, we're assuming that the file is placed in
+                <literal>/home/example/classes</literal>. We'll explain the source code
+                in detail shortly. But first we'd like to discuss how we should register the
                 task to Phing so that it can be executed during the build process.</para>
 
         </sect2>
         <sect2>
             <title> Using the Task </title>
 
-            <para>The task shown [above] must somehow get called by Phing. Therefore it must be made
+            <para>The task shown [above] must somehow get loaded and called by Phing. Therefore it must be made
                 available to Phing so that the buildfile parser is aware a correlating XML element
                 and it's parameters. Have a look at the minimalistic buildfile example given in [the
                 buildfile below] that does exactly this.</para>
@@ -412,18 +413,24 @@ class MyEchoTask extends Task {
             <programlisting language="xml">&lt;?xml version="1.0" ?>
 
 &lt;project name="test" basedir="." default="test.myecho">
-    &lt;taskdef name="myecho" classname="phing.tasks.my.MyEchoTask" />
+    &lt;includepath classpath="/home/example/classes" />
+    &lt;taskdef name="myecho" classname="MyEchoTask" />
 
     &lt;target name="test.myecho">
       &lt;myecho message="Hello World" />
     &lt;/target>
 &lt;/project></programlisting>
 
-            <para> Besides the XML document prolog and the shell elements that are required to
-                properly execute the task (project, target) you'll find the
-                    <literal>&lt;taskdef></literal> element (line 4) that properly registers your
-                custom task to Phing. For a detailed synopsis of the taskdef element see the
-                [description of this task].</para>
+            <para>To register the custom task with Phing, the
+            <literal>taskdef</literal> element (line 5) is used. See <xref
+            xlink:href="#TaskdefTask"/> for
+            a more detailed explanation.
+            Optionally, before the <literal>taskdef</literal> element,
+            the <literal>includepath</literal> element adds a path
+            to PHP's include path. This is of course only required if the mentioned
+            path isn't already on the include path. See <xref
+            xlink:href="#IncludePathTask"/> for
+            a more detailed explanation.</para>
 
             <para> Now, as we have registered the task by assigning a name and the worker class
                 ([see source code above]) it is ready for usage within the
@@ -435,7 +442,7 @@ class MyEchoTask extends Task {
         <sect2>
             <title>Source Discussion </title>
 
-            <para>No that you've got the knowledge to execute the task in a buildfile it's time to
+            <para>Now that you've got the knowledge to execute the task in a buildfile it's time to
                 discuss how everything works.</para>
 
         </sect2>
@@ -551,7 +558,7 @@ class MyEchoTask extends Task {
 
             <para> As you can see in the XML definition of our task ([see buildfile above] , line 9)
                 there is an attribute defined with the task itself, namely "message" with a value of
-                the the text string that our task should echo. The task must somehow become aware of
+                the text string that our task should echo. The task must somehow become aware of
                 the attribute name and the value. Therefore the <literal>setter methods</literal>
                 exist.</para>
 
@@ -602,7 +609,7 @@ class MyEchoTask extends Task {
             <title>
                 <literal>main()</literal> Method </title>
 
-            <para> There is exactly one entry entry point to execute the task. It is called after
+            <para> There is exactly one entry point to execute the task. It is called after
                 the complete buildfile has been parsed and all targets and tasks have been scheduled
                 for execution. From this point forward the very implementation of the tasks action
                 starts. In case of our example a message (imported by the proper setter method) is
@@ -781,7 +788,7 @@ class DSN extends DataType {
   &lt;target name="main">
 
     &lt;my-special-db-task>
-	     &lt;dsn refid="maindsn"/>
+         &lt;dsn refid="maindsn"/>
     &lt;/my-special-db-task>
 
     &lt;my-other-db-task>
@@ -889,7 +896,7 @@ class DOSMapper implements FileNameMapper {
    */
   public function setFrom($from) {}
 
-	 /**
+     /**
    * The "from" attribute is not needed here, but method must exist.
    */
   public function setTo($to) {}

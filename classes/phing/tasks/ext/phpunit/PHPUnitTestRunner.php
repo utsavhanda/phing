@@ -19,7 +19,6 @@
  * <http://phing.info>.
  */
 
-require_once 'PHPUnit/Autoload.php';
 require_once 'phing/tasks/ext/coverage/CoverageMerger.php';
 require_once 'phing/system/util/Timer.php';
 
@@ -178,7 +177,13 @@ class PHPUnitTestRunner extends PHPUnit_Runner_BaseTestRunner implements PHPUnit
     
     protected function composeMessage($message, PHPUnit_Framework_Test $test, Exception $e)
     {
-        return "Test $message (" . $test->getName() . " in class " . get_class($test) . "): " . $e->getMessage();
+        $message = "Test $message (" . $test->getName() . " in class " . get_class($test) . "): " . $e->getMessage();
+        
+        if ($e instanceof PHPUnit_Framework_ExpectationFailedException && $e->getComparisonFailure()) {
+            $message .= "\n" . $e->getComparisonFailure()->getDiff();
+        }
+        
+        return $message;
     }
 
     /**
@@ -228,6 +233,17 @@ class PHPUnitTestRunner extends PHPUnit_Runner_BaseTestRunner implements PHPUnit
     public function addSkippedTest(PHPUnit_Framework_Test $test, Exception $e, $time)
     {
         $this->lastSkippedMessage = $this->composeMessage("SKIPPED", $test, $e);
+    }
+
+    /**
+     * Risky test
+     *
+     * @param  PHPUnit_Framework_Test $test
+     * @param  Exception              $e
+     * @param  float                  $time
+     */
+    public function addRiskyTest(PHPUnit_Framework_Test $test, Exception $e, $time)
+    {
     }
 
     /**
@@ -307,6 +323,11 @@ class PHPUnitTestRunner extends PHPUnit_Runner_BaseTestRunner implements PHPUnit
      */
     public function endTest(PHPUnit_Framework_Test $test, $time)
     {
+        if ($test instanceof PHPUnit_Framework_TestCase) {
+            if (!$test->hasPerformedExpectationsOnOutput()) {
+                echo $test->getActualOutput();
+            }
+        }
     }
 }
 

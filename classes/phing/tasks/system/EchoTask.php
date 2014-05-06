@@ -22,14 +22,13 @@
 include_once 'phing/Task.php';
 
 /**
- *  Echos a message to the logging system or to a file
+ * Echos a message to the logging system or to a file
  *
- *  @author   Michiel Rook <mrook@php.net>
- *  @author   Andreas Aderhold, andi@binarycloud.com
- *  @version  $Id$
- *  @package  phing.tasks.system
+ * @author   Michiel Rook <mrook@php.net>
+ * @author   Andreas Aderhold, andi@binarycloud.com
+ * @version  $Id$
+ * @package  phing.tasks.system
  */
-
 class EchoTask extends Task {
     
     protected $msg = "";
@@ -92,9 +91,14 @@ class EchoTask extends Task {
         foreach ($this->filesets as $fs) {
             $ds = $fs->getDirectoryScanner($project);
             $fromDir  = $fs->getDir($project);
+            $srcDirs  = $ds->getIncludedDirectories();
             $srcFiles = $ds->getIncludedFiles();
             $msg .= 'Directory: ' . $fromDir . ' => '
                 . realpath($fromDir) . "\n";
+            foreach ($srcDirs as $dir) {
+                $relPath = $fromDir . DIRECTORY_SEPARATOR . $dir;
+                $msg .= $relPath . "\n";
+            }
             foreach ($srcFiles as $file) {
                 $relPath = $fromDir . DIRECTORY_SEPARATOR . $file;
                 $msg .= $relPath . "\n";

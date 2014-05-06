@@ -38,16 +38,27 @@ class RuntimeConfigurable {
     private $wrappedObject = null;
     private $attributes = array();
     private $characters = "";
+    private $proxyConfigured = false;
 
 
     /** @param proxy The element to wrap. */
     function __construct($proxy, $elementTag) {
         $this->wrappedObject = $proxy;
         $this->elementTag = $elementTag;
+        
+        if ($proxy instanceof Task) {
+            $proxy->setRuntimeConfigurableWrapper($this);
+        }
+    }
+    
+    public function getProxy()
+    {
+        return $this->wrappedObject;
     }
 
     function setProxy($proxy) {
         $this->wrappedObject = $proxy;
+        $this->proxyConfigured = false;
     }
 
     /** Set's the attributes for the wrapped element. */
@@ -82,12 +93,16 @@ class RuntimeConfigurable {
 
     /** Configure the wrapped element and all children. */
     function maybeConfigure(Project $project) {
+        if ($this->proxyConfigured) {
+            return;
+        }
+        
         $id = null;
 
         // DataType configured in ProjectConfigurator
         //        if ( is_a($this->wrappedObject, "DataType") )
         //            return;
-
+        
         if ($this->attributes || $this->characters) {
             ProjectConfigurator::configure($this->wrappedObject, $this->attributes, $project);
 
@@ -97,20 +112,21 @@ class RuntimeConfigurable {
 
             if ($this->characters) {
                 ProjectConfigurator::addText($project, $this->wrappedObject, (string) $this->characters);
-                $this->characters="";
             }
             if ($id !== null) {
                 $project->addReference($id, $this->wrappedObject);
             }
         }
 
-        if ( is_array($this->children) && !empty($this->children) ) {
+        /*if ( is_array($this->children) && !empty($this->children) ) {
             // Configure all child of this object ...
             foreach($this->children as $child) {
                 $child->maybeConfigure($project);
                 ProjectConfigurator::storeChild($project, $this->wrappedObject, $child->wrappedObject, strtolower($child->getElementTag()));
             }
-        }
+        }*/
+        
+        $this->proxyConfigured = true;
     }
 }
 

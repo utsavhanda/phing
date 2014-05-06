@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?xml-model href="http://www.oasis-open.org/docbook/xml/5.0/rng/docbookxi.rng" 
+<?xml-model href="http://www.oasis-open.org/docbook/xml/5.0/rng/docbookxi.rng"
             schematypens="http://relaxng.org/ns/structure/1.0"?>
 <appendix xmlns="http://docbook.org/ns/docbook" xmlns:xi="http://www.w3.org/2001/XInclude"
     xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="app.factsheet">
@@ -141,7 +141,10 @@
                     </row>
                     <row>
                         <entry><literal>-l -list</literal></entry>
-                        <entry>List all available targets in buildfile</entry>
+                        <entry>List all available targets in buildfile
+                        (excluding targets that have their
+                        <literal>hidden</literal> attribute set to
+                        <literal>true</literal>)</entry>
                     </row>
                     <row>
                         <entry><literal>-q -quiet</literal></entry>
@@ -176,8 +179,8 @@
                         <entry><literal>-logger path.to.Logger</literal></entry>
                         <entry>Specify an alternate logger. Default is phing.listener.DefaultLogger.
                             Other options include phing.listener.NoBannerLogger,
-                            phing.listener.AnsiColorLogger, phing.listener.XmlLogger and
-                            phing.listener.HtmlColorLogger.</entry>
+                            phing.listener.AnsiColorLogger, phing.listener.XmlLogger,
+                            phing.listener.TargetLogger and phing.listener.HtmlColorLogger.</entry>
                     </row>
                     <row>
                         <entry><literal>-propertyfile &lt;file></literal></entry>
@@ -207,7 +210,7 @@
   |    `-- phing_guide
   `-- test
        |-- classes
-	   `-- etc</programlisting>
+       `-- etc</programlisting>
     </sect1>
     <sect1 xml:id="sec.exitcodes">
         <title>Program Exit Codes</title>

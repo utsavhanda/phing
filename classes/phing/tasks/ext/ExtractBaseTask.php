@@ -48,13 +48,12 @@ abstract class ExtractBaseTask extends MatchingTask {
     protected $forceExtract = false;
 
     /**
-     * Add a new fileset.
-     * @return FileSet
+     * Nested adder, adds a set of files (nested fileset attribute).
+     *
+     * @return void
      */
-    public function createFileSet() {
-        $this->fileset = new FileSet();
-        $this->filesets[] = $this->fileset;
-        return $this->fileset;
+    public function addFileSet(FileSet $fs) {
+        $this->filesets[] = $fs;
     }
 
     /**
@@ -97,7 +96,7 @@ abstract class ExtractBaseTask extends MatchingTask {
         
         $filesToExtract = array();
         if ($this->file !== null) {
-            if(!$this->isDestinationUpToDate($this->file)) {
+            if($this->forceExtract || !$this->isDestinationUpToDate($this->file)) {
                 $filesToExtract[] = $this->file;
             } else {
                 $this->log('Nothing to do: ' . $this->todir->getAbsolutePath() . ' is up to date for ' .  $this->file->getCanonicalPath(), Project::MSG_INFO);

@@ -253,11 +253,11 @@ class FileSyncTask extends Task
         }
         
         if ($this->verbose === true) {
-            $options .= 'v';
+            $options .= ' --verbose';
         }
         
         if ($this->checksum === true) {
-            $options .= 'c';
+            $options .= ' --checksum';
         }
         
         if ($this->identityFile !== null) {
@@ -280,16 +280,16 @@ class FileSyncTask extends Task
             $options .= ' --itemize-changes';
         }
         if ($this->backupDir !== null) {
-            $options .= ' -b --backup-dir=' . $this->backupDir;
+            $options .= ' -b --backup-dir="' . $this->backupDir . '"';
         }
         
         if ($this->excludeFile !== null) {
-            $options .= ' --exclude-from=' . $this->excludeFile;
+            $options .= ' --exclude-from="' . $this->excludeFile . '"';
         }
 
         $this->setOptions($options);
 
-        $options .= ' ' . $this->sourceDir . ' ' . $this->destinationDir;
+        $options .= ' "' . $this->sourceDir . '" "' . $this->destinationDir . '"';
 
         escapeshellcmd($options);
         $options .= ' 2>&1';

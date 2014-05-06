@@ -64,12 +64,12 @@ class JsMinTask extends Task
     protected $targetDir;
 
     /**
-     *  Nested creator, adds a set of files (nested fileset attribute).
+     * Nested adder, adds a set of files (nested fileset attribute).
+     *
+     * @return void
      */
-    public function createFileSet()
-    {
-        $num = array_push($this->filesets, new FileSet());
-        return $this->filesets[$num - 1];
+    public function addFileSet(FileSet $fs) {
+        $this->filesets[] = $fs;
     }
 
     /**
@@ -124,7 +124,7 @@ class JsMinTask extends Task
                     try {
                         $target = $this->targetDir . '/' . str_replace($fullPath, '', str_replace('.js', $this->suffix . '.js', $file));
                         if (file_exists(dirname($target)) === false) {
-                            mkdir(dirname($target), 0700, true);
+                            mkdir(dirname($target), 0777 - umask(), true);
                         }
                         
                         file_put_contents($target, JSMin::minify(file_get_contents($fullPath . '/' . $file)));

@@ -52,26 +52,30 @@ class PhpDocumentor2Wrapper
      * name of the template to use
      * @var string
      */
-    private $template = "responsive";
+    private $template = "responsive-twig";
     
     /**
      * Title of the project
      * @var string
      */
-    private $title = "";
+    private $title = "API Documentation";
     
     /**
-     * Force phpDocumentor to be quiet
-     * @todo Make this work again
-     * @var boolean
+     * Name of the default package
+     * @var string
      */
-    private $quiet = true;
+    private $defaultPackageName = "Default";
     
     /**
      * Path to the phpDocumentor 2 source
      * @var string
      */
     private $phpDocumentorPath = "";
+    
+    /**
+     * @var \phpDocumentor\Application
+     */
+    private $app = null;
     
     /**
      * Sets project instance
@@ -104,7 +108,7 @@ class PhpDocumentor2Wrapper
 
     /**
      * Sets the template to use
-     * @param strings $template
+     * @param string $template
      */
     public function setTemplate($template)
     {
@@ -113,7 +117,7 @@ class PhpDocumentor2Wrapper
     
     /**
      * Sets the title of the project
-     * @param strings $title
+     * @param string $title
      */
     public function setTitle($title)
     {
@@ -121,12 +125,12 @@ class PhpDocumentor2Wrapper
     }
     
     /**
-     * Forces phpDocumentor to be quiet
-     * @param boolean $quiet
+     * Sets the default package name
+     * @param string $defaultPackageName
      */
-    public function setQuiet($quiet)
+    public function setDefaultPackageName($defaultPackageName)
     {
-        $this->quiet = (boolean) $quiet;
+        $this->defaultPackageName = (string) $defaultPackageName;
     }
     
     /**
@@ -134,25 +138,24 @@ class PhpDocumentor2Wrapper
      */
     private function initializePhpDocumentor()
     {
-        $phpDocumentorPath = null;
-        
-        foreach (explode(PATH_SEPARATOR, get_include_path()) as $path) {
-            $testPhpDocumentorPath = $path . DIRECTORY_SEPARATOR . 'phpDocumentor' . DIRECTORY_SEPARATOR . 'src';
-
-            if (file_exists($testPhpDocumentorPath)) {
-                $phpDocumentorPath = $testPhpDocumentorPath;
+        if (class_exists('Composer\\Autoload\\ClassLoader', false)) {
+            if (!class_exists('phpDocumentor\\Bootstrap')) {
+                throw new BuildException('You need to install PhpDocumentor 2 or add your include path to your composer installation.');
             }
-        }
+            $phpDocumentorPath = '';
+        } else {
+            $phpDocumentorPath = $this->findPhpDocumentorPath();
 
-        if (empty($phpDocumentorPath)) {
-            throw new BuildException("Please make sure PhpDocumentor 2 is installed and on the include_path.", $this->getLocation());
+            if (empty($phpDocumentorPath)) {
+                throw new BuildException("Please make sure PhpDocumentor 2 is installed and on the include_path.");
+            }
+            
+            set_include_path($phpDocumentorPath . PATH_SEPARATOR . get_include_path());
+            
+            require_once $phpDocumentorPath . '/phpDocumentor/Bootstrap.php';        
         }
         
-        set_include_path($phpDocumentorPath . PATH_SEPARATOR . get_include_path());
-        
-        require_once $phpDocumentorPath . '/phpDocumentor/Bootstrap.php';
-            
-        \phpDocumentor\Bootstrap::createInstance()->initialize();
+        $this->app = \phpDocumentor\Bootstrap::createInstance()->initialize();
         
         $this->phpDocumentorPath = $phpDocumentorPath;
     }
@@ -165,8 +168,12 @@ class PhpDocumentor2Wrapper
      */
     private function parseFiles()
     {
-        $parser = new \phpDocumentor\Parser\Parser();
-        $parser->setTitle($this->title);
+        $parser = $this->app['parser'];
+        $builder = $this->app['descriptor.builder'];
+        
+        $builder->createProjectDescriptor(); 
+        $projectDescriptor = $builder->getProjectDescriptor();
+        $projectDescriptor->setName($this->title);
         
         $paths = array();
         
@@ -183,12 +190,39 @@ class PhpDocumentor2Wrapper
         
         $this->project->log("Will parse " . count($paths) . " file(s)", Project::MSG_VERBOSE);
         
-        $files = new phpDocumentor\Fileset\Collection();
+        $files = new \phpDocumentor\Fileset\Collection();
         $files->addFiles($paths);
         
-        $parser->setPath($files->getProjectRoot());
+        $mapper = new \phpDocumentor\Descriptor\Cache\ProjectDescriptorMapper($this->app['descriptor.cache']);
+        $mapper->garbageCollect($files);
+        $mapper->populate($projectDescriptor);
         
-        return $parser->parseFiles($files);
+        $parser->setPath($files->getProjectRoot());
+        $parser->setDefaultPackageName($this->defaultPackageName);
+        
+        $parser->parse($builder, $files);
+        
+        $mapper->save($projectDescriptor);
+        
+        return $mapper;
+    }
+    
+    /**
+     * Transforms the parsed files
+     */
+    private function transformFiles()
+    {
+        $transformer = $this->app['transformer'];
+        $compiler = $this->app['compiler'];
+        $builder = $this->app['descriptor.builder'];
+        $projectDescriptor = $builder->getProjectDescriptor();
+        
+        $transformer->getTemplates()->load($this->template, $transformer);
+        $transformer->setTarget($this->destDir->getAbsolutePath());
+        
+        foreach ($compiler as $pass) {
+            $pass->execute($projectDescriptor);
+        }
     }
 
     /**
@@ -198,15 +232,34 @@ class PhpDocumentor2Wrapper
     {
         $this->initializePhpDocumentor();
         
-        $xml = $this->parseFiles();
+        $cache = $this->app['descriptor.cache'];
+        $cache->getOptions()->setCacheDir($this->destDir->getAbsolutePath());
+        
+        $this->parseFiles();
         
         $this->project->log("Transforming...", Project::MSG_VERBOSE);
         
-        $transformer = new phpDocumentor\Transformer\Transformer();
-        $transformer->setTemplatesPath($this->phpDocumentorPath . '/../data/templates');
-        $transformer->setTemplates($this->template);
-        $transformer->setSource($xml);
-        $transformer->setTarget($this->destDir->getAbsolutePath());
-        $transformer->execute();
+        $this->transformFiles();
+    }
+
+    /**
+     * Find the correct php documentor path
+     *
+     * @return null|string
+     */
+    private function findPhpDocumentorPath()
+    {
+        $phpDocumentorPath = null;
+        $directories = array('phpDocumentor', 'phpdocumentor');
+        foreach ($directories as $directory) {
+            foreach (Phing::explodeIncludePath() as $path) {
+                $testPhpDocumentorPath = $path . DIRECTORY_SEPARATOR . $directory . DIRECTORY_SEPARATOR . 'src';
+                if (file_exists($testPhpDocumentorPath)) {
+                    $phpDocumentorPath = $testPhpDocumentorPath;
+                }
+            }
+        }
+
+        return $phpDocumentorPath;
     }
 }

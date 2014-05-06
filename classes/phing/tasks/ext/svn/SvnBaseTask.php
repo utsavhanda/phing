@@ -204,19 +204,35 @@ abstract class SvnBaseTask extends Task
     }
     
     /**
-     * Sets the non-recursive switch
+     * Sets the recursive switch
+     * @deprecated
      */
     function setRecursive($value)
     {
-        $this->svnSwitches['non-recursive'] = is_bool($value) ? !$value : true;
     }
     
     /**
-     * Returns the non-recursive switch
+     * Returns the recursive switch
+     * @deprecated
      */
     function getRecursive()
     {
-        return isset( $this->svnSwitches['non-recursive'] ) ? !$this->svnSwitches['non-recursive'] : true;
+    }
+
+    /**
+     * Sets the depth switch
+     */
+    public function setDepth($value)
+    {
+        $this->svnSwitches['depth'] = $value;
+    }
+    
+    /**
+     * Returns the depth switch
+     */
+    public function getDepth()
+    {
+        return isset($this->svnSwitches['depth']) ? $this->svnSwitches['depth'] : '';
     }
 
     /**
@@ -263,7 +279,13 @@ abstract class SvnBaseTask extends Task
         
         // Set up runtime options. Will be passed to all
         // subclasses.
-        $options = array('fetchmode' => $this->fetchMode, 'svn_path' => $this->getSvnPath());
+        $options = array('fetchmode' => $this->fetchMode);
+        
+        if ($this->oldVersion) {
+            $options['svn_path'] = $this->getSvnPath();
+        } else {
+            $options['binaryPath'] = $this->getSvnPath();
+        }
         
         // Pass array of subcommands we need to factory
         $this->svn = VersionControl_SVN::factory($mode, $options);

@@ -126,6 +126,14 @@ class DbDeployTask extends Task
      * @var int
      */
     protected $checkall = false;
+    
+    /**
+     * The value of the 'applied_by' column for
+     * each changelog entry
+     *
+     * @var string
+     */
+    protected $appliedBy = 'dbdeploy';
 
     /**
      * The main function for the task
@@ -144,7 +152,7 @@ class DbDeployTask extends Task
             // figure out which revisions are in the db already
             $this->appliedChangeNumbers = $this->getAppliedChangeNumbers();
             $this->log('Current db revision: '.$this->getLastChangeAppliedInDb());
-            $this->log('Checkall: ' . $this->checkall);
+            $this->log('Checkall: ' . ($this->checkall ? 'On' : 'Off'));
 
             $this->deploy();
 
@@ -240,7 +248,7 @@ class DbDeployTask extends Task
                                 (change_number, delta_set, start_dt, applied_by, description)' .
                             ' VALUES (' . $fileChangeNumber . ', \'' . $this->deltaSet . '\', ' .
                                 $this->dbmsSyntax->generateTimestamp() .
-                                ', \'dbdeploy\', \'' . $fileName . '\');' . "\n";
+                                ', \'' . $this->appliedBy . '\', \'' . $fileName . '\');' . "\n";
                 }
 
                 // read the file
@@ -282,8 +290,14 @@ class DbDeployTask extends Task
     protected function getDeltasFilesArray()
     {
         $files = array();
+        
         $baseDir = realpath($this->dir);
         $dh = opendir($baseDir);
+        
+        if ($dh === false) {
+            return $files;
+        }
+        
         $fileChangeNumberPrefix = '';
         while (($file = readdir($dh)) !== false) {
             if (preg_match('[\d+]', $file, $fileChangeNumberPrefix)) {
@@ -424,16 +438,25 @@ class DbDeployTask extends Task
     {
         $this->checkall = (int)$checkall;
     }
+    
+    /**
+     * Set the appliedBy property
+     *
+     * @param string $appliedBy
+     * @return void
+     */
+    public function setAppliedBy($appliedBy)
+    {
+        $this->appliedBy = $appliedBy;
+    }
 
     /**
-     * Add a new fileset.
-     * @return FileSet
+     * Nested adder, adds a set of files (nested fileset attribute).
+     *
+     * @return void
      */
-    public function createFileSet()
-    {
-        $this->fileset = new FileSet();
-        $this->filesets[] = $this->fileset;
-        return $this->fileset;
+    public function addFileSet(FileSet $fs) {
+        $this->filesets[] = $fs;
     }
 }
 
